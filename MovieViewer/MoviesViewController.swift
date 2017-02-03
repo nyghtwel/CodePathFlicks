@@ -11,6 +11,9 @@ import AFNetworking
 class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
   @IBOutlet weak var tableView: UITableView!
   
+  
+  
+  // @IBOutlet var didTap: UITapGestureRecognizer!
   var movies: [NSDictionary]?
   
   override func viewDidLoad() {
@@ -25,16 +28,99 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     let task: URLSessionDataTask = session.dataTask(with: request) { (data: Data?, response: URLResponse?, error: Error?) in
       if let data = data {
         if let dataDictionary = try! JSONSerialization.jsonObject(with: data, options: []) as? NSDictionary {
-          print(dataDictionary)
+          // print(dataDictionary)
           self.movies = dataDictionary["results"] as? [NSDictionary]
           self.tableView.reloadData()
         }
       }
       
     }
+    print("init")
+    
     task.resume()
+    let gestureRecognizer = UITapGestureRecognizer(target: self, action: #selector (showText))
+    gestureRecognizer.numberOfTapsRequired = 2
+    tableView.addGestureRecognizer(gestureRecognizer)
+    let longGesture = UITapGestureRecognizer(target: self, action: #selector (jump))
+    
+    tableView.addGestureRecognizer(longGesture)
+    longGesture.require(toFail: gestureRecognizer)
+    print("init tap")
+  }
+  
+  func jump(recognizer: UIGestureRecognizer){
+    if recognizer.state == UIGestureRecognizerState.ended{
+      
+      let tappedLocation = recognizer.location(in: self.tableView)
+      //  let tappedY = tappedLocation.y.truncatingRemainder(dividingBy: 620)
+      
+      
+      if let tappedIndexPath = tableView.indexPathForRow(at: tappedLocation ){
+        //var row = 0;
+        
+        
+        if let tappedCell = self.tableView.cellForRow(at: tappedIndexPath) as? MovieCell{
+          //print(tappedCell)
+          tappedCell.overviewLabel.isHidden = !(tappedCell.overviewLabel.isHidden)
+          
+          if !tappedCell.overviewLabel.isHidden {
+            tappedCell.overviewLabel.backgroundColor = UIColor.black
+            
+          }else{
+            tappedCell.overviewLabel.backgroundColor = UIColor.clear
+          }
+        }
+      }
+      
+      
+    }
+    
+    
     
   }
+  func showText(recognizer: UIGestureRecognizer){
+    if recognizer.state == UIGestureRecognizerState.ended{
+      let tappedLocation = recognizer.location(in: self.tableView)
+      let tappedY = tappedLocation.y.truncatingRemainder(dividingBy: 650)
+      
+      if let tappedIndexPath = tableView.indexPathForRow(at: tappedLocation ){
+        
+        var row = 0;
+        if(tappedY > 320 && tappedIndexPath.row < movies!.count){
+          if let tappedCell = self.tableView.cellForRow(at: tappedIndexPath) as? MovieCell{
+            //print(tappedCell)
+            tappedCell.overviewLabel.isHidden = true
+            
+            
+            tappedCell.overviewLabel.backgroundColor = UIColor.clear
+            
+          }
+          row = tappedIndexPath.row+1
+          let index = NSIndexPath(row: row, section: 0)
+          self.tableView.scrollToRow(at: index as IndexPath, at: .bottom, animated: true)
+        }else if (tappedY < 320 && tappedIndexPath.row != 0) {
+          if let tappedCell = self.tableView.cellForRow(at: tappedIndexPath) as? MovieCell{
+            //print(tappedCell)
+            tappedCell.overviewLabel.isHidden = true
+            
+            tappedCell.overviewLabel.backgroundColor = UIColor.clear
+            
+          }
+          print("bug")
+          row = tappedIndexPath.row - 1
+          let index = NSIndexPath(row: row, section: 0)
+          self.tableView.scrollToRow(at: index as IndexPath, at: .bottom, animated: true)
+        }else{
+          
+          
+        }
+      }
+      
+    }
+    
+  }
+  
+  //long press function
   
   public func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int{
     if movies != nil {
@@ -55,7 +141,11 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     let imageURL = NSURL(string: baseURL + posterPath)
     
     cell.titleLabel.text = title
+    cell.titleLabel.isHidden = true
+    
     cell.overviewLabel.text = overview
+    cell.overviewLabel.isHidden = true
+    cell.overviewLabel.backgroundColor = UIColor.clear
     cell.posterView.setImageWith(imageURL! as URL)
     return cell
     
