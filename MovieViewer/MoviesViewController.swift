@@ -8,6 +8,8 @@
 
 import UIKit
 import AFNetworking
+import MBProgressHUD
+
 class MoviesViewController: UIViewController, UITableViewDataSource, UITableViewDelegate {
   @IBOutlet weak var tableView: UITableView!
   
@@ -18,15 +20,40 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
   
   override func viewDidLoad() {
     super.viewDidLoad()
+    
+    let refreshControl = UIRefreshControl()
+    refreshControl.addTarget(self, action: #selector(refreshControlAction(_:)), for: UIControlEvents.valueChanged)
+    
+    
     tableView.dataSource = self
     tableView.delegate = self
+    tableView.insertSubview(refreshControl, at: 0)
+   
     
+    getMovieData()
+    
+    // DIsplay HUD right before the request is made
+    
+    let gestureRecognizer = UITapGestureRecognizer(target: self, action: #selector (showText))
+    gestureRecognizer.numberOfTapsRequired = 2
+    tableView.addGestureRecognizer(gestureRecognizer)
+    let longGesture = UITapGestureRecognizer(target: self, action: #selector (jump))
+    
+    tableView.addGestureRecognizer(longGesture)
+    longGesture.require(toFail: gestureRecognizer)
+    print("init tap")
+  }
+  
+  func getMovieData() {
     let apiKey = "a07e22bc18f5cb106bfe4cc1f83ad8ed"
     let url = URL(string: "https://api.themoviedb.org/3/movie/now_playing?api_key=\(apiKey)")!
     let request = URLRequest(url: url, cachePolicy: .reloadIgnoringLocalCacheData, timeoutInterval: 10)
     let session = URLSession(configuration: .default, delegate: nil, delegateQueue: OperationQueue.main)
+    MBProgressHUD.showAdded(to: self.view, animated: true)
+    
     let task: URLSessionDataTask = session.dataTask(with: request) { (data: Data?, response: URLResponse?, error: Error?) in
       if let data = data {
+        MBProgressHUD.hide(for: self.view, animated: true)
         if let dataDictionary = try! JSONSerialization.jsonObject(with: data, options: []) as? NSDictionary {
           // print(dataDictionary)
           self.movies = dataDictionary["results"] as? [NSDictionary]
@@ -38,14 +65,15 @@ class MoviesViewController: UIViewController, UITableViewDataSource, UITableView
     print("init")
     
     task.resume()
-    let gestureRecognizer = UITapGestureRecognizer(target: self, action: #selector (showText))
-    gestureRecognizer.numberOfTapsRequired = 2
-    tableView.addGestureRecognizer(gestureRecognizer)
-    let longGesture = UITapGestureRecognizer(target: self, action: #selector (jump))
+  }
+  // Makes a network request to get updated data
+  // Updates the tableView with the new data
+  // Hides the RefreshControl
+  func refreshControlAction(_ refreshControl: UIRefreshControl) {
     
-    tableView.addGestureRecognizer(longGesture)
-    longGesture.require(toFail: gestureRecognizer)
-    print("init tap")
+    getMovieData()
+    refreshControl.endRefreshing()
+    
   }
   
   func jump(recognizer: UIGestureRecognizer){
